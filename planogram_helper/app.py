@@ -1,11 +1,13 @@
 from flask import Flask, request
 import requests
-import os
+from io import BytesIO
 
 app = Flask(__name__)
-TOKEN = '7522558436:AAHSpCaEebx693mDunI4cMRJPCfFf0Kop710'
+
+TOKEN = '7522558346:AAHspCaEebx693mDunI4cMRJPCfF0Kop710'
 CHAT = '7760306280'
-last_not_found = None  # чтобы избежать повторных сообщений
+YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
+sent_not_found = set()
 
 def normalize(value):
     if not value:
@@ -16,44 +18,11 @@ def extract_text(field):
     value = field.get('value')
     options = field.get('options', [])
     if isinstance(value, list) and options:
-        selected = [opt['text'] for opt in options if opt['id'] in value]
-        return selected[0] if selected else ''
+        selected = next((opt['text'] for opt in options if opt['id'] == value[0]), '')
+        return selected
     elif isinstance(value, (int, str)):
         return str(value)
     return ''
-
-def send_photo_from_yadisk(filename):
-    global last_not_found
-    public_url = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
-    get_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download'
-    params = {'public_key': public_url, 'path': f'/{filename}'}
-    response = requests.get(get_url, params=params)
-    data = response.json()
-    download_url = data.get('href')
-
-    if not download_url:
-        if last_not_found == filename:
-            return  # уже отправляли
-        last_not_found = filename
-        not_found_msg = (
-            f"К сожалению, мы пока не нашли подходящее фото по заданным параметрам:\n\n"
-            f"• Имя файла: {filename}\n"
-            f"Мы дополним базу и сообщим, когда появится пример!"
-        )
-        send_message(not_found_msg)
-        return
-
-    last_not_found = None  # фото найдено — обнуляем
-    photo = requests.get(download_url).content
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-        data={'chat_id': CHAT},
-        files={'photo': ('photo.jpg', photo)}
-    )
-
-def send_message(text):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, data={'chat_id': CHAT, 'text': text})
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -70,8 +39,48 @@ def webhook():
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
     filename = f"{gender}{brand}{articles_count}{equipment}{highlight_color}_{basic_color}.jpg"
-    send_photo_from_yadisk(filename)
-    return 'ok', 200
+    print(">>> Ищем фото:", filename)
+
+    success = send_photo_from_yadisk(filename)
+    if success:
+        return 'Фото отправлено!', 200
+
+    if filename not in sent_not_found:
+        msg = (
+            f"К сожалению, мы пока не нашли подходящее фото по заданным параметрам:\n\n"
+            f"• Пол: {gender or '-'}\n"
+            f"• Бренд: {brand or '-'}\n"
+            f"• Артикулов: {articles_count or '-'}\n"
+            f"• Оборудование: {equipment or '-'}\n"
+            f"• Highlight: {highlight_color or '-'}\n"
+            f"• Basic: {basic_color or '-'}\n\n"
+            "Мы дополним базу и сообщим, когда появится пример!"
+        )
+        send_message(msg)
+        sent_not_found.add(filename)
+
+    return 'Фото не найдено', 404
+
+def send_photo_from_yadisk(filename):
+    api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
+    params = {"public_key": YANDEX_FOLDER_LINK, "path": f"/{filename}"}
+    response = requests.get(api_url, params=params)
+
+    if response.status_code == 200:
+        download_url = response.json().get("href")
+        photo = requests.get(download_url)
+        if photo.status_code == 200:
+            requests.post(
+                f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+                data={'chat_id': CHAT},
+                files={'photo': (filename, BytesIO(photo.content))}
+            )
+            return True
+    return False
+
+def send_message(text):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={'chat_id': CHAT, 'text': text})
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
