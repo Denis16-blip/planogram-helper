@@ -1,5 +1,6 @@
 from flask import Flask, request
 import requests
+from urllib.parse import quote
 from io import BytesIO
 
 app = Flask(__name__)
@@ -62,11 +63,16 @@ def webhook():
     return 'Фото не найдено', 404
 
 def send_photo_from_yadisk(filename):
+    print(f">>> Ищем фото: {filename}")
+    
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
+    encoded_filename = quote(filename)
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": f"/photos planogram_helper/{filename}"
+        "path": f"/photos planogram_helper/{encoded_filename}"
     }
+
+    print(f"Yandex encoded path: {params['path']}")
 
     response = requests.get(api_url, params=params)
 
@@ -77,8 +83,8 @@ def send_photo_from_yadisk(filename):
         if photo.status_code == 200:
             requests.post(
                 f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-                data={"chat_id": CHAT},
-                files={"photo": (filename, BytesIO(photo.content))}
+                data={'chat_id': CHAT},
+                files={'photo': (filename, BytesIO(photo.content))}
             )
             return True
 
