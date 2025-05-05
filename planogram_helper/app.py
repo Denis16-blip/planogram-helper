@@ -39,7 +39,7 @@ def webhook():
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
     filename = f"{gender}{brand}{articles_count}{equipment}{highlight_color}_{basic_color}.jpg"
-    print(">>> Ищем фото:", filename)
+    print(">>> Готовый filename:", filename)
 
     success = send_photo_from_yadisk(filename)
     if success:
