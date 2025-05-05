@@ -70,4 +70,4 @@ def send_message(text):
     requests.post(url, data={'chat_id': CHAT, 'text': text})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
