@@ -63,7 +63,7 @@ def webhook():
 
 def send_photo_from_yadisk(filename):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    params = {"public_key": YANDEX_FOLDER_LINK, "path": f"/{filename}"}
+    params = {"public_key": YANDEX_FOLDER_LINK, "path": f"/photos%20planogram_helper/{filename}"}
     response = requests.get(api_url, params=params)
 
     if response.status_code == 200:
