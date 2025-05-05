@@ -66,11 +66,11 @@ def send_photo_from_yadisk(filename):
     print(f">>> Ищем фото: {filename}")
     
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_filename = quote(filename)
+    encoded_filename = quote(f"/photos_planogram_helper/{filename}")
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": f"/photos planogram_helper/{encoded_filename}"
-    }
+        "path": encoded_filename}
+    
 
     print(f"Yandex encoded path: {params['path']}")
 
