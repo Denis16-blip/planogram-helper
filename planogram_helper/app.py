@@ -2,7 +2,7 @@ from flask import Flask, request
 import requests
 import os
 
-app = Flask(_name_)
+app = Flask(__name__)
 TOKEN = '7522558436:AAHSpCaEebx693mDunI4cMRJPCfFf0Kop710'
 CHAT = '7760306280'
 last_not_found = None  # чтобы избежать повторных сообщений
@@ -73,5 +73,5 @@ def webhook():
     send_photo_from_yadisk(filename)
     return 'ok', 200
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
