@@ -1,35 +1,41 @@
 from flask import Flask, request
 import requests
-from urllib.parse import quote
+from urllib.parse import quote_plus
 from io import BytesIO
 
 app = Flask(__name__)
 
-TOKEN = "7522558346:AAHspCaEebx693mDunI4cMRJPCfF0Kop710"
-CHAT = "7760306280"
+TOKEN = '7522558346:AAHSpCaEebx693mDun14cMRJPCfFfOKpr7I0'
+CHAT = '7760306280'
 YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
+
 sent_not_found = set()
+
 
 def normalize(value):
     if not value:
-        return ''
+        return ""
     return str(value).strip().lower().replace(' ', '_')
+
 
 def extract_text(field):
     value = field.get('value')
     options = field.get('options', [])
     if isinstance(value, list) and options:
         selected = next((opt['text'] for opt in options if opt['id'] == value[0]), '')
-        return selected or ''
+        return selected
     elif isinstance(value, (int, str)):
         return str(value)
     return ''
 
-@app.route('/webhook', methods=['POST'])
+
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.json
-    form_data = data.get('data', {})
+    form_data = request.json
+    form = form_data.get('data', {})
     fields = form_data.get('fields', [])
+
+    # Преобразуем список полей в словарь {label: выбранный текст}
     form = {field['label']: extract_text(field) for field in fields}
 
     gender = normalize(form.get('Пол'))
@@ -39,7 +45,7 @@ def webhook():
     highlight_color = normalize(form.get('Выбери Highlight цвета'))
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
-    filename = f"{gender}{brand}{articles_count}{equipment}{highlight_color}_{basic_color}.jpg"
+    filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
     print(">>> Готовый filename:", filename)
 
     success = send_photo_from_yadisk(filename)
@@ -55,24 +61,27 @@ def webhook():
             f"• Оборудование: {equipment or '-'}\n"
             f"• Highlight: {highlight_color or '-'}\n"
             f"• Basic: {basic_color or '-'}\n\n"
-            "Мы дополним базу и сообщим, когда появится пример!"
+            f"Мы дополним базу и сообщим, когда появится пример!"
         )
         send_message(msg)
         sent_not_found.add(filename)
 
     return "Фото не найдено", 404
 
+
 def send_photo_from_yadisk(filename):
     print(">>> Ищем фото:", filename)
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_filename = quote(f"photos_planogram_helper/{filename}")
+    encoded_filename = quote_plus(filename)
     params = {
         "public_key": YANDEX_FOLDER_LINK,
         "path": encoded_filename
     }
-
     print(">>> Yandex encoded path:", params["path"])
-    response = requests.get(api_url, params=params)
+
+    headers = {"Accept": "application/json"}
+    response = requests.get(api_url, params=params, headers=headers)
+
     if response.status_code == 200:
         download_url = response.json().get("href")
         photo = requests.get(download_url)
@@ -83,11 +92,14 @@ def send_photo_from_yadisk(filename):
                 files={'photo': (filename, BytesIO(photo.content))}
             )
             return True
+
     return False
+
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     requests.post(url, data={'chat_id': CHAT, 'text': text})
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
