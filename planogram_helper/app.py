@@ -67,7 +67,7 @@ def send_photo_from_yadisk(filename):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": filename
+        "path": f"/{filename}"
     }
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
