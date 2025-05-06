@@ -70,14 +70,15 @@ def webhook():
     return "Фото не найдено", 404
 
 def send_photo_from_yadisk(filename):
+    print(">>> Ищем фото:", filename)
+
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_filename = quote(filename)
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": f"/photos_planogram_helper/{encoded_filename}"
+        "path": f"/photos_planogram_helper/{filename}"
     }
 
-    print(">>> Yandex encoded path:", params["path"])
+    print(">>> Yandex path (raw):", params["path"])
 
     response = requests.get(api_url, params=params)
     if response.status_code == 200:
@@ -91,6 +92,7 @@ def send_photo_from_yadisk(filename):
             )
             return True
     return False
+
 
 def send_message(text):
     requests.post(
