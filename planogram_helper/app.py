@@ -4,7 +4,7 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-TOKEN = '7522558346:AAHspCaEebx693mDunI4cMRJPCfF0Kop710'
+TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
 CHAT = '7760306280'
 YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
 sent_not_found = set()
