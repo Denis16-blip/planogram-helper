@@ -1,42 +1,40 @@
 from flask import Flask, request
 import requests
-from urllib.parse import quote
 from io import BytesIO
 
 app = Flask(__name__)
 
-TOKEN = '7522558346:AAHspCaEebx693mDunI4cMRJPCfF0Kop710'
-CHAT = '7760306280'
+TOKEN = '7522558346:AAHSpCaEebx693mDunI4cMRJPCfFfOKpr710'
+CHAT = '7760360280'
 YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
+
 sent_not_found = set()
+
 
 def normalize(value):
     if not value:
         return ''
     return str(value).strip().lower().replace(' ', '_')
 
+
 def extract_text(field):
     value = field.get('value')
     options = field.get('options', [])
     if isinstance(value, list) and options:
         selected = next((opt['text'] for opt in options if opt['id'] == value[0]), '')
-        return selected or value[0]
+        return selected or (value[0] if value else '')
     if isinstance(value, (int, str)):
         return str(value)
     return ''
 
-@app.route("/webhook", methods=["POST"])
+
+@app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
     form_data = data.get('data', {})
     fields = form_data.get('fields', [])
 
-    # 🔍 Отладка входящих данных
-    print("RAW DATA:", data)
-    print("FORM DATA:", form_data)
-
     form = {field['label']: extract_text(field) for field in fields}
-    print("PARSED FORM:", form)
 
     gender = normalize(form.get('Пол'))
     brand = normalize(form.get('Бренд'))
@@ -46,16 +44,16 @@ def webhook():
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
     filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
-    print(">>> Готовый filename:", filename)
-    print(">>> Ищем фото:", filename)
+    print(f">>> Готовый filename: {filename}")
 
     success = send_photo_from_yadisk(filename)
+
     if success:
         return "Фото отправлено!", 200
 
     if filename not in sent_not_found:
         msg = (
-            f"К сожалению, мы пока не нашли подходящее фото по заданным параметрам:\n\n"
+            f"⚠️ К сожалению, мы пока не нашли подходящее фото по заданным параметрам:\n\n"
             f"• Пол: {gender or '-'}\n"
             f"• Бренд: {brand or '-'}\n"
             f"• Артикулов: {articles_count or '-'}\n"
@@ -69,20 +67,19 @@ def webhook():
 
     return "Фото не найдено", 404
 
-def send_photo_from_yadisk(filename):
-    print(">>> Ищем фото:", filename)
 
+def send_photo_from_yadisk(filename):
+    print(f">>> Ищем фото: {filename}")
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
     params = {
         "public_key": YANDEX_FOLDER_LINK,
         "path": f"/photos_planogram_helper/{filename}"
     }
-
-    print(">>> Yandex path (raw):", params["path"])
-
+    print(f">>> Yandex encoded path: {params['path']}")
     response = requests.get(api_url, params=params)
+
     if response.status_code == 200:
-        download_url = response.json().get('href')
+        download_url = response.json().get("href")
         photo = requests.get(download_url)
         if photo.status_code == 200:
             requests.post(
@@ -91,15 +88,16 @@ def send_photo_from_yadisk(filename):
                 files={'photo': (filename, BytesIO(photo.content))}
             )
             return True
+
     return False
 
 
 def send_message(text):
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        data={'chat_id': CHAT, 'text': text}
-    )
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={'chat_id': CHAT, 'text': text})
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
+
 
