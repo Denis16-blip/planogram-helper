@@ -38,7 +38,7 @@ def webhook():
     highlight_color = normalize(form.get('Выбери Highlight цвета'))
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
-    filename = f"photos_planogram_helper/{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
+    filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
     print(f">>> Готовый filename: {filename}")
     print(f">>> Ищем фото: {filename}")
 
@@ -67,7 +67,7 @@ def send_photo_from_yadisk(filename):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": f"/{filename}"
+        "path": f"/{filename}"  # убрали подкаталог
     }
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
@@ -97,5 +97,6 @@ def send_message(text):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
 
