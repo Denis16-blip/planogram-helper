@@ -2,21 +2,22 @@ from flask import Flask, request
 import requests
 from urllib.parse import quote_plus
 from io import BytesIO
+import re
 
 app = Flask(__name__)
 
-TOKEN = '7522558346:AAHSpCaEebx693mDun14cMRJPCfFfOKpr7I0'
+# Твои реальные значения:
+TOKEN = '7522558346:AAHSpCaEebx693mDunI4cMRJPCfF0Kop710'
 CHAT = '7760306280'
 YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
 
 sent_not_found = set()
 
-
 def normalize(value):
     if not value:
         return ""
-    return str(value).strip().lower().replace(' ', '_')
-
+    value = str(value).strip().lower()
+    return re.sub(r"[^\w]+", "_", value)
 
 def extract_text(field):
     value = field.get('value')
@@ -28,14 +29,12 @@ def extract_text(field):
         return str(value)
     return ''
 
-
 @app.route("/webhook", methods=["POST"])
 def webhook():
     form_data = request.json
-    form = form_data.get('data', {})
+    data = form_data.get('data', {})
     fields = form_data.get('fields', [])
 
-    # Преобразуем список полей в словарь {label: выбранный текст}
     form = {field['label']: extract_text(field) for field in fields}
 
     gender = normalize(form.get('Пол'))
@@ -68,14 +67,13 @@ def webhook():
 
     return "Фото не найдено", 404
 
-
 def send_photo_from_yadisk(filename):
     print(">>> Ищем фото:", filename)
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_filename = quote_plus(filename)
+    encoded_path = quote_plus(f"photos_planogram_helper/{filename}")
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": encoded_filename
+        "path": encoded_path
     }
     print(">>> Yandex encoded path:", params["path"])
 
@@ -95,11 +93,9 @@ def send_photo_from_yadisk(filename):
 
     return False
 
-
 def send_message(text):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     requests.post(url, data={'chat_id': CHAT, 'text': text})
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
