@@ -38,7 +38,7 @@ def webhook():
     highlight_color = normalize(form.get('Выбери Highlight цвета'))
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
-    filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
+    filename = f"photos_planogram_helper/{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
     print(f">>> Готовый filename: {filename}")
     print(f">>> Ищем фото: {filename}")
 
