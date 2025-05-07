@@ -1,10 +1,14 @@
+
+
+
+
 from flask import Flask, request
 import requests
 from io import BytesIO
 
 app = Flask(__name__)
 
-TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
+TOKEN = 'ТВОЙ_ТОКЕН_ОТ_Бота'
 YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
 sent_not_found = set()
 
@@ -30,13 +34,11 @@ def webhook():
     fields = form_data.get('fields', [])
     hidden = form_data.get('hiddenFields', {})
 
-    # 🟡 Получаем chat_id из скрытого поля формы
-    chat_id = hidden.get('chat_id')
+    chat_id = hidden.get('chat_id') or 'default_chat_id'
     if not chat_id:
-        print(">>> ❌ Ошибка: не передан chat_id")
-        return 'No chat_id', 400
+        print(">>> ❌ chat_id не передан!")
+        return 'Нет chat_id', 400
 
-    # 🧩 Извлекаем поля формы
     form = {field['label']: extract_text(field) for field in fields}
 
     gender = normalize(form.get('Пол'))
@@ -47,10 +49,9 @@ def webhook():
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
     filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
-    print(f">>> Готовый filename: {filename}")
+    print(f">>> filename: {filename}")
 
-    success = send_photo_from_yadisk(chat_id, filename)
-    if success:
+    if send_photo_from_yadisk(filename, chat_id):
         return 'Фото отправлено!', 200
 
     if filename not in sent_not_found:
@@ -64,45 +65,38 @@ def webhook():
             f"• Basic: {basic_color or '-'}\n\n"
             f"Мы дополним базу и сообщим, когда появится пример!"
         )
-        send_message(chat_id, msg)
+        send_message(msg, chat_id)
         sent_not_found.add(filename)
 
     return 'Фото не найдено', 404
 
-def send_photo_from_yadisk(chat_id, filename):
-    print(f">>> Yandex путь: {filename}")
-
+def send_photo_from_yadisk(filename, chat_id):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
     params = {
         "public_key": YANDEX_FOLDER_LINK,
         "path": f"/{filename}"
     }
-
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
-        print(f">>> ❌ Ответ Яндекса: {response.status_code} — {response.text}")
+        print(f">>> Yandex API error: {response.status_code} — {response.text}")
         return False
 
     download_url = response.json().get("href")
-    print(f">>> ✅ Получен download URL: {download_url}")
     if not download_url:
-        print(">>> ❌ Ошибка: не удалось получить ссылку для скачивания")
+        print(">>> Нет ссылки для скачивания")
         return False
 
     photo = requests.get(download_url)
-    if photo.status_code != 200:
-        print(">>> ❌ Фото не удалось скачать")
-        return False
+    if photo.status_code == 200:
+        requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+            data={'chat_id': chat_id},
+            files={'photo': (filename, BytesIO(photo.content))}
+        )
+        return True
+    return False
 
-    tg_response = requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-        data={'chat_id': chat_id},
-        files={'photo': (filename, BytesIO(photo.content))}
-    )
-    print(f">>> 📤 Telegram ответ: {tg_response.status_code} — {tg_response.text}")
-    return tg_response.status_code == 200
-
-def send_message(chat_id, text):
+def send_message(text, chat_id):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={'chat_id': chat_id, 'text': text}
@@ -110,7 +104,3 @@ def send_message(chat_id, text):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
-
-
