@@ -8,7 +8,7 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-TOKEN = 'ТВОЙ_ТОКЕН_ОТ_Бота'
+TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
 YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
 sent_not_found = set()
 
