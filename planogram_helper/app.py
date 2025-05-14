@@ -1,18 +1,4 @@
-import json
-import re
-
-def extract_chat_id(raw_value):
-    try:
-        match = re.search(r'user=(\{.*?\})', raw_value)
-        if match:
-            user_json = match.group(1)
-            user_data = json.loads(user_json)
-            return str(user_data.get("id"))
-    except Exception as e:
-        print(f"Ошибка извлечения chat_id: {e}")
-    return DEFAULT_CHAT_ID
-
-
+import urllib.parse
 
 
 
@@ -24,7 +10,6 @@ from io import BytesIO
 app = Flask(__name__)
 
 TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
-DEFAULT_CHAT_ID = '7760306280'
 YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
 sent_not_found = set()
 
