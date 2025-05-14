@@ -1,79 +1,122 @@
-import os
 import json
-import requests
+import re
+
+def extract_chat_id(raw_value):
+    try:
+        match = re.search(r'user=(\{.*?\})', raw_value)
+        if match:
+            user_json = match.group(1)
+            user_data = json.loads(user_json)
+            return str(user_data.get("id"))
+    except Exception as e:
+        print(f"Ошибка извлечения chat_id: {e}")
+    return DEFAULT_CHAT_ID
+
+
+
+
+
+
 from flask import Flask, request
-from urllib.parse import unquote, parse_qs
+import requests
+from io import BytesIO
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.getenv('7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA')
+TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
+DEFAULT_CHAT_ID = '7760306280'
+YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
+sent_not_found = set()
 
-YANDEX_PUBLIC_FOLDER = "https://disk.yandex.ru/d/photos_planogram_helper"
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+def normalize(value):
+    if not value:
+        return ''
+    return str(value).strip().lower().replace(' ', '_')
 
+def extract_text(field):
+    value = field.get('value')
+    options = field.get('options', [])
+    if isinstance(value, list) and options:
+        selected = next((opt['text'] for opt in options if opt['id'] == value[0]), '')
+        return selected
+    elif isinstance(value, (int, str)):
+        return str(value)
+    return ''
 
-def extract_chat_id(raw_chat_id):
-    """
-    Извлекает числовой chat_id из строки вида {{user.id}}#tgWebAppData=...
-    """
-    if isinstance(raw_chat_id, str):
-        if "user=" in raw_chat_id:
-            raw_chat_id = unquote(raw_chat_id)
-            try:
-                user_block = raw_chat_id.split("user=")[-1]
-                user_json = user_block.split("&")[0]
-                user_data = json.loads(user_json)
-                return str(user_data.get("id"))
-            except Exception as e:
-                print("Ошибка при извлечении chat_id:", e)
-                return None
-        if raw_chat_id.isdigit():
-            return raw_chat_id
-    return None
-
-
-@app.route("/webhook", methods=["POST"])
+@app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.get_json()
-    print(">>> Входящие данные от Tally:")
-    print(data)
+    data = request.json
+    form_data = data.get('data', {})
+    fields = form_data.get('fields', [])
+    hidden = form_data.get('hiddenFields', {})
 
-    try:
-        fields = {field["key"]: field["value"]["label"] if isinstance(field["value"], dict) else field["value"]
-                  for field in data["fields"]}
-        gender = fields.get("gender", "").lower()
-        brand = fields.get("brand", "").lower()
-        num_items = fields.get("num_items", "").lower()
-        equipment = fields.get("equipment", "").lower()
-        highlight_colors = "_".join(sorted(fields.get("highlight_colors", [])))
-        base_colors = "_".join(sorted(fields.get("base_colors", [])))
-        raw_chat_id = fields.get("chat_id")
+    chat_id = hidden.get('chat_id') or 'default_chat_id'
+    if not chat_id:
+        print(">>> ❌ chat_id не передан!")
+        return 'Нет chat_id', 400
 
-        chat_id = extract_chat_id(raw_chat_id)
-        print(f">>> chat_id: {chat_id}")
+    form = {field['label']: extract_text(field) for field in fields}
 
-        if not chat_id:
-            print("❌ Ошибка: chat_id не извлечён")
-            return "Missing chat_id", 400
+    gender = normalize(form.get('Пол'))
+    brand = normalize(form.get('Бренд'))
+    articles_count = normalize(form.get('Количество артикулов'))
+    equipment = normalize(form.get('Тип оборудования'))
+    highlight_color = normalize(form.get('Выбери Highlight цвета'))
+    basic_color = normalize(form.get('Выбери Basic цвета'))
 
-        filename = f"{gender}_{brand}_{num_items}_{equipment}_{highlight_colors}_{base_colors}.jpg"
-        filename = filename.replace(" ", "_").replace(",", "").lower()
-        print(">>> Имя файла:", filename)
+    filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
+    print(f">>> filename: {filename}")
 
-        photo_url = f"{YANDEX_PUBLIC_FOLDER}/{filename}"
+    if send_photo_from_yadisk(filename, chat_id):
+        return 'Фото отправлено!', 200
 
-        response = requests.post(
-            TELEGRAM_API_URL,
-            data={"chat_id": chat_id, "photo": photo_url}
+    if filename not in sent_not_found:
+        msg = (
+            f"К сожалению, мы пока не нашли подходящее фото по заданным параметрам:\n\n"
+            f"• Пол: {gender or '-'}\n"
+            f"• Бренд: {brand or '-'}\n"
+            f"• Артикулов: {articles_count or '-'}\n"
+            f"• Оборудование: {equipment or '-'}\n"
+            f"• Highlight: {highlight_color or '-'}\n"
+            f"• Basic: {basic_color or '-'}\n\n"
+            f"Мы дополним базу и сообщим, когда появится пример!"
         )
+        send_message(msg, chat_id)
+        sent_not_found.add(filename)
 
-        print(">>> Telegram ответ:", response.text)
-        return "OK", 200
+    return 'Фото не найдено', 404
 
-    except Exception as e:
-        print("❌ Ошибка обработки запроса:", e)
-        return "Internal Server Error", 500
+def send_photo_from_yadisk(filename, chat_id):
+    api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
+    params = {
+        "public_key": YANDEX_FOLDER_LINK,
+        "path": f"/{filename}"
+    }
+    response = requests.get(api_url, params=params)
+    if response.status_code != 200:
+        print(f">>> Yandex API error: {response.status_code} — {response.text}")
+        return False
 
+    download_url = response.json().get("href")
+    if not download_url:
+        print(">>> Нет ссылки для скачивания")
+        return False
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    photo = requests.get(download_url)
+    if photo.status_code == 200:
+        requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+            data={'chat_id': chat_id},
+            files={'photo': (filename, BytesIO(photo.content))}
+        )
+        return True
+    return False
+
+def send_message(text, chat_id):
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={'chat_id': chat_id, 'text': text}
+    )
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
