@@ -9,6 +9,7 @@ from io import BytesIO
 app = Flask(__name__)
 
 TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
+DEFAULT_CHAT_ID = '7760306280'
 YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
 sent_not_found = set()
 
@@ -30,14 +31,12 @@ def extract_text(field):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
+    print(">>> 🔎 Входящие данные от Tally:")
+    print(data)
+
     form_data = data.get('data', {})
     fields = form_data.get('fields', [])
-    hidden = form_data.get('hiddenFields', {})
-
-    chat_id = hidden.get('chat_id') or 'default_chat_id'
-    if not chat_id:
-        print(">>> ❌ chat_id не передан!")
-        return 'Нет chat_id', 400
+    hidden_fields = form_data.get('hiddenFields', {})
 
     form = {field['label']: extract_text(field) for field in fields}
 
@@ -49,9 +48,13 @@ def webhook():
     basic_color = normalize(form.get('Выбери Basic цвета'))
 
     filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
-    print(f">>> filename: {filename}")
+    print(f">>> Готовый filename: {filename}")
 
-    if send_photo_from_yadisk(filename, chat_id):
+    chat_id = hidden_fields.get('chat_id', DEFAULT_CHAT_ID)
+    print(f">>> Используемый chat_id: {chat_id}")
+
+    success = send_photo_from_yadisk(filename, chat_id)
+    if success:
         return 'Фото отправлено!', 200
 
     if filename not in sent_not_found:
@@ -78,12 +81,12 @@ def send_photo_from_yadisk(filename, chat_id):
     }
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
-        print(f">>> Yandex API error: {response.status_code} — {response.text}")
+        print(f">>> Ответ Яндекса: {response.status_code} — {response.text}")
         return False
 
     download_url = response.json().get("href")
     if not download_url:
-        print(">>> Нет ссылки для скачивания")
+        print(">>> Ошибка: не удалось получить ссылку для скачивания")
         return False
 
     photo = requests.get(download_url)
