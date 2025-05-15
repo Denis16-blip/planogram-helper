@@ -1,17 +1,16 @@
-# >>> FINAL TEST PUSH <<< 15.05.2025
-
 from flask import Flask, request
 import requests
 from io import BytesIO
-
-# Прямо в коде заданы токен и публичная ссылка
-TOKEN = '7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA'
-YANDEX_FOLDER_LINK = 'https://disk.yandex.ru/d/WkDN69OomEBY_g'
+import urllib.parse
 
 app = Flask(__name__)
 
+# Твой токен и публичная ссылка на папку
+TOKEN = "7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA"
+YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
+
 def normalize_text(text):
-    return str(text).strip().lower().replace(" ", "_").replace("ё", "е")
+    return text.strip().lower().replace(" ", "_")
 
 def build_filename(data):
     gender = normalize_text(data.get("gender", ""))
@@ -24,10 +23,13 @@ def build_filename(data):
 
 def send_photo_from_yadisk(filename, chat_id):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
+    encoded_filename = urllib.parse.quote(filename)
+
     params = {
         "public_key": YANDEX_FOLDER_LINK,
-        "path": filename
+        "path": encoded_filename
     }
+
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
         print(f">>> Yandex API error: {response.status_code} — {response.text}")
