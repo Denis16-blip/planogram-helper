@@ -31,6 +31,8 @@ def extract_text(field):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
+    print(f">>> Получен запрос: {data}")  # 🔧
+
     form_data = data.get('data', {})
     fields = form_data.get('fields', [])
     hidden = form_data.get('hiddenFields', {})
