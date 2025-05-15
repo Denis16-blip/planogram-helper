@@ -23,7 +23,9 @@ def build_filename(data):
 
 def send_photo_from_yadisk(filename, chat_id):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_filename = urllib.parse.quote(filename)
+
+    # 🧠 ВАЖНО: кодируем путь файла для API-запроса
+    encoded_filename = urllib.parse.quote(filename, encoding="utf-8", safe="")
 
     params = {
         "public_key": YANDEX_FOLDER_LINK,
@@ -32,7 +34,7 @@ def send_photo_from_yadisk(filename, chat_id):
 
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
-        print(f">>> Yandex API error: {response.status_code} — {response.text}")
+        print(f">>> Ошибка API Яндекса: {response.status_code} — {response.text}")
         return False
 
     download_url = response.json().get("href")
@@ -44,8 +46,8 @@ def send_photo_from_yadisk(filename, chat_id):
     if photo.status_code == 200:
         requests.post(
             f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-            data={'chat_id': chat_id},
-            files={'photo': (filename, BytesIO(photo.content))}
+            data={"chat_id": chat_id},
+            files={"photo": (filename, BytesIO(photo.content))}
         )
         return True
     else:
