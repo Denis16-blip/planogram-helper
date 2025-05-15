@@ -1,7 +1,3 @@
-import urllib.parse
-
-
-
 
 from flask import Flask, request
 import requests
@@ -18,38 +14,22 @@ def normalize(value):
         return ''
     return str(value).strip().lower().replace(' ', '_')
 
-def extract_text(field):
-    value = field.get('value')
-    options = field.get('options', [])
-    if isinstance(value, list) and options:
-        selected = next((opt['text'] for opt in options if opt['id'] == value[0]), '')
-        return selected
-    elif isinstance(value, (int, str)):
-        return str(value)
-    return ''
-
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
-    print(f">>> Получен запрос: {data}")  # 🔧
+    print(f">>> Получен запрос: {data}")
 
-    form_data = data.get('data', {})
-    fields = form_data.get('fields', [])
-    hidden = form_data.get('hiddenFields', {})
-
-    chat_id = hidden.get('chat_id') or 'default_chat_id'
+    chat_id = data.get("chat_id")
     if not chat_id:
         print(">>> ❌ chat_id не передан!")
         return 'Нет chat_id', 400
 
-    form = {field['label']: extract_text(field) for field in fields}
-
-    gender = normalize(form.get('Пол'))
-    brand = normalize(form.get('Бренд'))
-    articles_count = normalize(form.get('Количество артикулов'))
-    equipment = normalize(form.get('Тип оборудования'))
-    highlight_color = normalize(form.get('Выбери Highlight цвета'))
-    basic_color = normalize(form.get('Выбери Basic цвета'))
+    gender = normalize(data.get("gender"))
+    brand = normalize(data.get("brand"))
+    articles_count = normalize(data.get("articles"))
+    equipment = normalize(data.get("equipment"))
+    highlight_color = normalize(data.get("highlight"))
+    basic_color = normalize(data.get("basic"))
 
     filename = f"{gender}_{brand}_{articles_count}_{equipment}_{highlight_color}_{basic_color}.jpg"
     print(f">>> filename: {filename}")
