@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Твой токен и публичная ссылка на папку
 TOKEN = "7522558346:AAFujER9qTT5FGwkWOu1fkKMZ5VggtGW_fA"
-YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
+YANDEX_FOLDER_LINK = "WkDN69OomEBY_g"
 
 def normalize_text(text):
     return text.strip().lower().replace(" ", "_")
