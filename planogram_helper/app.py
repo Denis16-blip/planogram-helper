@@ -41,7 +41,7 @@ def webhook():
     print(">>> [DEBUG] RAW REQUEST DATA:", data)  # 👈 ДОБАВЬ ЭТО
 
 
-    chat_id = data.get("chat_id") or data.get("chatId")
+    chat_id = data.get("chat_id") or data.get("chatId") or data.get("USER_ID")
     filename = build_filename(data)
     print(f">>> имя файла: {filename}")
 
