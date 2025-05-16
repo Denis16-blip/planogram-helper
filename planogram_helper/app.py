@@ -1,6 +1,7 @@
 from flask import Flask, request
 import requests
 from io import BytesIO
+import re
 
 app = Flask(__name__)
 
@@ -18,6 +19,15 @@ def build_filename(data):
     highlight = normalize_text(data.get("highlight", ""))
     basic = normalize_text(data.get("basic", ""))
     return f"{gender}_{brand}_{articles}_{equipment}_{highlight}_{basic}.jpg"
+
+def extract_numeric_chat_id(chat_id):
+    """Извлекает числовой chat_id из строки или HTML-ссылки"""
+    if not chat_id:
+        return None
+    match = re.search(r'>(\d+)<', str(chat_id))  # из <a href="...">123456</a>
+    if match:
+        return match.group(1)
+    return re.sub(r'\D', '', str(chat_id))  # оставить только цифры
 
 def send_photo_from_github(filename, chat_id):
     photo_url = GITHUB_BASE_URL + filename
@@ -38,10 +48,11 @@ def send_photo_from_github(filename, chat_id):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
-    print(">>> [DEBUG] RAW REQUEST DATA:", data)  # 👈 ДОБАВЬ ЭТО
+    print(">>> [DEBUG] RAW REQUEST DATA:", data)
 
+    chat_id_raw = data.get("chat_id") or data.get("chatId") or data.get("USER_ID")
+    chat_id = extract_numeric_chat_id(chat_id_raw)
 
-    chat_id = data.get("chat_id") or data.get("chatId") or data.get("USER_ID")
     filename = build_filename(data)
     print(f">>> имя файла: {filename}")
 
