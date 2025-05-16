@@ -21,15 +21,15 @@ def build_filename(data):
     return f"{gender}_{brand}_{articles}_{equipment}_{highlight}_{basic}.jpg"
 
 def extract_numeric_chat_id(chat_id):
-    """Извлекает числовой chat_id из HTML-ссылки или строки"""
+    """Извлекает числовой chat_id из строки или HTML-ссылки"""
     if not chat_id:
         return None
-
-    match = re.search(r'>(\d{6,15})<', str(chat_id))  # сначала пробуем вытащить ID из HTML
-    if match:
-        return match.group(1)
-
-    digits = re.sub(r'\D', '', str(chat_id))  # если просто строка — оставляем только цифры
+    # Ищем число внутри HTML-тега, если есть
+    html_match = re.search(r'>(\d+)<', str(chat_id))
+    if html_match:
+        return html_match.group(1)
+    # Если не HTML — оставляем только цифры
+    digits = re.sub(r'\D', '', str(chat_id))
     return digits if digits else None
 
 def send_photo_from_github(filename, chat_id):
