@@ -20,13 +20,19 @@ def build_filename(data):
     basic = normalize_text(data.get("basic", ""))
     return f"{gender}_{brand}_{articles}_{equipment}_{highlight}_{basic}.jpg"
 
-def extract_numeric_chat_id(value):
-    """Надёжно извлекает числовой chat_id из HTML, строки или числа"""
-    if not value:
+def extract_numeric_chat_id(chat_id):
+    """Извлекает числовой chat_id из HTML-ссылки или строки"""
+    if not chat_id:
         return None
-    # Вытаскиваем первое число длиной от 6 до 15 символов
-    match = re.search(r'\d{6,15}', str(value))
-    return match.group(0) if match else None
+
+    # Сначала пробуем вытащить ID из HTML <a href="...">123456789</a>
+    match = re.search(r'>(\d{6,15})<', str(chat_id))
+    if match:
+        return match.group(1)
+
+    # Если это просто строка с числом — убираем всё, кроме цифр
+    digits = re.sub(r'\D', '', str(chat_id))
+    return digits if digits else None
 
 def send_photo_from_github(filename, chat_id):
     if not chat_id:
