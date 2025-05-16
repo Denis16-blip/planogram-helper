@@ -24,12 +24,17 @@ def extract_numeric_chat_id(chat_id):
     """Извлекает числовой chat_id из строки или HTML-ссылки"""
     if not chat_id:
         return None
-    match = re.search(r'>(\d+)<', str(chat_id))  # из <a href="...">123456</a>
+    match = re.search(r'>(\d+)<', str(chat_id))  # ищем ID внутри HTML-тегов
     if match:
         return match.group(1)
-    return re.sub(r'\D', '', str(chat_id))  # оставить только цифры
+    digits = re.sub(r'\D', '', str(chat_id))  # если не HTML — оставляем только цифры
+    return digits if digits else None
 
 def send_photo_from_github(filename, chat_id):
+    if not chat_id:
+        print(">>> Ошибка: chat_id отсутствует, невозможно отправить фото.")
+        return False
+
     photo_url = GITHUB_BASE_URL + filename
     print(f">>> Сформированная ссылка на фото: {photo_url}")
 
@@ -57,7 +62,7 @@ def webhook():
     print(f">>> имя файла: {filename}")
 
     success = send_photo_from_github(filename, chat_id)
-    if not success:
+    if not success and chat_id:
         message = f"❌ Фото не найдено: {filename}"
         print(">>>", message)
         requests.post(
