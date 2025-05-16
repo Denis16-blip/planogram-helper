@@ -38,7 +38,8 @@ def send_photo_from_github(filename, chat_id):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
-    print(">>> Получен запрос:", data)
+    print(">>> [DEBUG] RAW REQUEST DATA:", data)  # 👈 ДОБАВЬ ЭТО
+
 
     chat_id = data.get("chat_id") or data.get("chatId")
     filename = build_filename(data)
