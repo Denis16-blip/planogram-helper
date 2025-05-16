@@ -25,13 +25,11 @@ def extract_numeric_chat_id(chat_id):
     if not chat_id:
         return None
 
-    # Сначала пробуем вытащить ID из HTML <a href="...">123456789</a>
-    match = re.search(r'>(\d{6,15})<', str(chat_id))
+    match = re.search(r'>(\d{6,15})<', str(chat_id))  # сначала пробуем вытащить ID из HTML
     if match:
         return match.group(1)
 
-    # Если это просто строка с числом — убираем всё, кроме цифр
-    digits = re.sub(r'\D', '', str(chat_id))
+    digits = re.sub(r'\D', '', str(chat_id))  # если просто строка — оставляем только цифры
     return digits if digits else None
 
 def send_photo_from_github(filename, chat_id):
@@ -59,7 +57,7 @@ def webhook():
     data = request.json
     print(">>> [DEBUG] RAW REQUEST DATA:", data)
 
-    chat_id_raw = data.get("chat_id") or data.get("chatId") or data.get("USER_ID")
+    chat_id_raw = data.get("chat_id") or data.get("chatId") or data.get("USER_ID_TEXT")  # <- вот ключевое изменение
     chat_id = extract_numeric_chat_id(chat_id_raw)
 
     filename = build_filename(data)
@@ -77,4 +75,4 @@ def webhook():
     return "", 200
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True
