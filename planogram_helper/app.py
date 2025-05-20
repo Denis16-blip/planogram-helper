@@ -64,12 +64,20 @@ def webhook():
     print(f">>> имя файла: {filename}")
 
     success = send_photo_from_github(filename, chat_id)
-    if not success and chat_id:
-        message = f"❌ Фото не найдено: {filename}"
-        print(">>>", message)
-        requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={"chat_id": chat_id, "text": message}
+if not success and chat_id:
+    message = f"❌ Фото не найдено: {filename}"
+    print(">>>", message)
+    
+    # Отправка сообщения и логирование ответа Telegram
+    response = requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={
+            "chat_id": str(chat_id),
+            "text": message
+        }
+    )
+    print(">>> Ответ от Telegram:", response.status_code, response.text)
+
         )
 
     return "", 200
