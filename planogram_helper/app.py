@@ -57,7 +57,7 @@ def webhook():
     data = request.json
     print(">>> [DEBUG] RAW REQUEST DATA:", data)
 
-    chat_id_raw = data.get("chat_id") or data.get("chatId") or data.get("USER_ID_TEXT")  # <- вот ключевое изменение
+    chat_id_raw = data.get("USER_ID_TEXT") or data.get("chat_id") or data.get("chatId")  # <- вот ключевое изменение
     chat_id = extract_numeric_chat_id(chat_id_raw)
 
     filename = build_filename(data)
