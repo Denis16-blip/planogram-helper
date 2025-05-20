@@ -24,11 +24,9 @@ def extract_numeric_chat_id(chat_id):
     """Извлекает числовой chat_id из строки или HTML-ссылки"""
     if not chat_id:
         return None
-    # Ищем число внутри HTML-тега, если есть
     html_match = re.search(r'>(\d+)<', str(chat_id))
     if html_match:
         return html_match.group(1)
-    # Если не HTML — оставляем только цифры
     digits = re.sub(r'\D', '', str(chat_id))
     return digits if digits else None
 
@@ -57,30 +55,29 @@ def webhook():
     data = request.json
     print(">>> [DEBUG] RAW REQUEST DATA:", data)
 
-    chat_id_raw = data.get("USER_ID_TEXT") or data.get("chat_id") or data.get("chatId")  # <- вот ключевое изменение
+    chat_id_raw = data.get("USER_ID_TEXT") or data.get("chat_id") or data.get("chatId")
     chat_id = extract_numeric_chat_id(chat_id_raw)
 
     filename = build_filename(data)
     print(f">>> имя файла: {filename}")
 
     success = send_photo_from_github(filename, chat_id)
-if not success and chat_id:
-    message = f"❌ Фото не найдено: {filename}"
-    print(">>>", message)
-    
-    # Отправка сообщения и логирование ответа Telegram
-    response = requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        data={
-            "chat_id": str(chat_id),
-            "text": message
-        }
-    )
-    print(">>> Ответ от Telegram:", response.status_code, response.text)
 
+    if not success and chat_id:
+        message = f"❌ Фото не найдено: {filename}"
+        print(">>>", message)
+
+        response = requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            data={
+                "chat_id": str(chat_id),
+                "text": message
+            }
         )
+        print(">>> Ответ от Telegram:", response.status_code, response.text)
 
     return "", 200
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# Локальный запуск не нужен на Render
+# if __name__ == "__main__":
+#     app.run(debug=True)
