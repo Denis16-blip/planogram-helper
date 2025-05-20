@@ -5,7 +5,7 @@ import re
 
 app = Flask(__name__)
 
-TOKEN = "7522558346:AAFujER9qTT5FGwkW0u1fkKMZ5VggtGW_fA"
+TOKEN = "7522558346:AAEdZfdvAEoDntjAf0kmxdp0DSd5iDamRcc"
 GITHUB_BASE_URL = "https://raw.githubusercontent.com/Denis16-blip/planogram-images/main/"
 
 def normalize_text(text):
