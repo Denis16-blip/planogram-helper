@@ -7,48 +7,53 @@ import urllib.parse
 app = Flask(__name__)
 
 TOKEN = "7522558346:AAEdZfdvAEoDntjAf0kmxdp0DSd5iDamRcc"
-YANDEX_PUBLIC_URL = "WkDN69OomEBY_g"
+YANDEX_PUBLIC_URL = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
 
 def normalize_text(text):
     return text.strip().lower().replace(" ", "_")
 
 def build_filename(data):
-    gender = normalize_text(data.get("gender", ""))
-    brand = normalize_text(data.get("brand", ""))
-    articles = normalize_text(data.get("articles", ""))
+    gender    = normalize_text(data.get("gender", ""))
+    brand     = normalize_text(data.get("brand", ""))
+    articles  = normalize_text(data.get("articles", ""))
     equipment = normalize_text(data.get("equipment", ""))
     highlight = normalize_text(data.get("highlight", ""))
-    basic = normalize_text(data.get("basic", ""))
+    basic     = normalize_text(data.get("basic", ""))
     return f"{gender}_{brand}_{articles}_{equipment}_{highlight}_{basic}.jpg"
 
 def extract_numeric_chat_id(chat_id):
     if not chat_id:
         return None
+    # из "<a href=...>12345</a>"
     html_match = re.search(r'>(\d+)<', str(chat_id))
     if html_match:
         return html_match.group(1)
+    # или просто вытаскиваем все цифры
     digits = re.sub(r'\D', '', str(chat_id))
-    return digits if digits else None
+    return digits or None
 
 def send_photo_from_yadisk(filename, chat_id):
     print(f">>> Пытаемся найти файл на Я.Диске: {filename}")
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_path = urllib.parse.quote(filename, safe='')  # важное отличие!
+    # путь внутри публичной папки всегда с ведущим "/"
+    path = "/" + filename
+    # обязательно URL-кодируем весь путь
+    encoded_path = urllib.parse.quote(path, safe="")
     params = {
         "public_key": YANDEX_PUBLIC_URL,
         "path": encoded_path
     }
-    response = requests.get(api_url, params=params)
-    if response.status_code != 200:
-        print(f">>> Яндекс.Диск API error: {response.status_code} — {response.text}")
+    resp = requests.get(api_url, params=params)
+    if resp.status_code != 200:
+        print(f">>> Яндекс.Диск API error: {resp.status_code} — {resp.text}")
         return False
 
-    download_url = response.json().get("href")
-    if not download_url:
+    href = resp.json().get("href")
+    if not href:
         print(">>> Нет ссылки на загрузку файла")
         return False
 
-    photo = requests.get(download_url)
+    photo = requests.get(href)
     if photo.status_code == 200:
         requests.post(
             f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
@@ -71,16 +76,14 @@ def webhook():
     filename = build_filename(data)
     print(f">>> итоговое имя файла: {filename}")
 
-    success = send_photo_from_yadisk(filename, chat_id)
-
-    if not success and chat_id:
-        message = f"❌ Фото не найдено: {filename}"
-        print(">>>", message)
-        response = requests.post(
+    if not send_photo_from_yadisk(filename, chat_id) and chat_id:
+        msg = f"❌ Фото не найдено: {filename}"
+        print(">>>", msg)
+        resp = requests.post(
             f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={"chat_id": str(chat_id), "text": message}
+            data={"chat_id": chat_id, "text": msg}
         )
-        print(">>> Ответ Telegram:", response.status_code, response.text)
+        print(">>> Ответ Telegram:", resp.status_code, resp.text)
 
     return "", 200
 
