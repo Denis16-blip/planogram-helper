@@ -23,11 +23,11 @@ def build_filename(data):
 def extract_numeric_chat_id(chat_id):
     if not chat_id:
         return None
-    # из "<a href=...>12345</a>"
-    html_match = re.search(r'>(\d+)<', str(chat_id))
-    if html_match:
-        return html_match.group(1)
-    # или просто вытаскиваем все цифры
+    # сначала из <a>…</a>
+    m = re.search(r'>(\d+)<', str(chat_id))
+    if m:
+        return m.group(1)
+    # иначе просто цифры
     digits = re.sub(r'\D', '', str(chat_id))
     return digits or None
 
@@ -36,7 +36,7 @@ def send_photo_from_yadisk(filename, chat_id):
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
     params = {
         "public_key": YANDEX_PUBLIC_URL,
-        "path": filename   # <-- чистое имя, без urlencode
+        "path": f"/{filename}"   # <-- ведущий слэш обязателен
     }
     resp = requests.get(api_url, params=params)
     print(">>> Запрос к Я.Диску:", resp.url)
@@ -46,7 +46,7 @@ def send_photo_from_yadisk(filename, chat_id):
 
     href = resp.json().get("href")
     if not href:
-        print(">>> Нет ссылки на загрузку файла")
+        print(">>> Нет поля href в ответе Яндекс.Диска")
         return False
 
     photo = requests.get(href)
@@ -58,7 +58,7 @@ def send_photo_from_yadisk(filename, chat_id):
         )
         return True
     else:
-        print(f">>> Ошибка при скачивании фото: {photo.status_code}")
+        print(f">>> Ошибка скачивания по href: {photo.status_code}")
         return False
 
 @app.route("/webhook", methods=["POST"])
@@ -82,6 +82,7 @@ def webhook():
         print(">>> Ответ Telegram:", r.status_code, r.text)
 
     return "", 200
+
 
 
 
