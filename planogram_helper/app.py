@@ -33,7 +33,7 @@ def extract_numeric_chat_id(chat_id):
 def send_photo_from_yadisk(filename, chat_id):
     print(f">>> Пытаемся найти файл на Я.Диске: {filename}")
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    encoded_filename = urllib.parse.quote(f"/{filename}")
+    encoded_filename = urllib.parse.quote(filename)
     params = {
         "public_key": YANDEX_PUBLIC_URL,
         "path": encoded_filename
