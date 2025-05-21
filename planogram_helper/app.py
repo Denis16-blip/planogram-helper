@@ -2,7 +2,6 @@ from flask import Flask, request
 import requests
 from io import BytesIO
 import re
-import urllib.parse
 
 app = Flask(__name__)
 
@@ -35,15 +34,12 @@ def extract_numeric_chat_id(chat_id):
 def send_photo_from_yadisk(filename, chat_id):
     print(f">>> Пытаемся найти файл на Я.Диске: {filename}")
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-    # путь внутри публичной папки всегда с ведущим "/"
-    path = "/" + filename
-    # обязательно URL-кодируем весь путь
-    encoded_path = urllib.parse.quote(path, safe="")
     params = {
         "public_key": YANDEX_PUBLIC_URL,
-        "path": encoded_path
+        "path": filename   # <-- чистое имя, без urlencode
     }
     resp = requests.get(api_url, params=params)
+    print(">>> Запрос к Я.Диску:", resp.url)
     if resp.status_code != 200:
         print(f">>> Яндекс.Диск API error: {resp.status_code} — {resp.text}")
         return False
@@ -57,8 +53,8 @@ def send_photo_from_yadisk(filename, chat_id):
     if photo.status_code == 200:
         requests.post(
             f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-            data={"chat_id": chat_id},
-            files={"photo": (filename, BytesIO(photo.content))}
+            data={ "chat_id": chat_id },
+            files={ "photo": (filename, BytesIO(photo.content)) }
         )
         return True
     else:
@@ -74,17 +70,18 @@ def webhook():
     chat_id = extract_numeric_chat_id(chat_id_raw)
 
     filename = build_filename(data)
-    print(f">>> итоговое имя файла: {filename}")
+    print(f">>> Итоговое имя файла: {filename}")
 
     if not send_photo_from_yadisk(filename, chat_id) and chat_id:
         msg = f"❌ Фото не найдено: {filename}"
         print(">>>", msg)
-        resp = requests.post(
+        r = requests.post(
             f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={"chat_id": chat_id, "text": msg}
+            data={ "chat_id": chat_id, "text": msg }
         )
-        print(">>> Ответ Telegram:", resp.status_code, resp.text)
+        print(">>> Ответ Telegram:", r.status_code, r.text)
 
     return "", 200
+
 
 
