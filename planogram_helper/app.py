@@ -7,7 +7,7 @@ import urllib.parse
 app = Flask(__name__)
 
 TOKEN = "7522558346:AAEdZfdvAEoDntjAf0kmxdp0DSd5iDamRcc"
-YANDEX_PUBLIC_URL = "https://disk.yandex.ru/d/WkDN69OomEBY_g"
+YANDEX_PUBLIC_URL = "WkDN69OomEBY_g"
 
 def normalize_text(text):
     return text.strip().lower().replace(" ", "_")
