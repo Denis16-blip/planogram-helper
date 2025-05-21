@@ -2,11 +2,12 @@ from flask import Flask, request
 import requests
 from io import BytesIO
 import re
+import urllib.parse  # Добавлено для URL-кодирования
 
 app = Flask(__name__)
 
-TOKEN = "7522558346:AAEdZfdvAEoDntjAf0kmxdp0DSd5iDamRcc"  # 🔁 Вставь сюда актуальный Telegram-токен
-YANDEX_FOLDER_LINK = "https://disk.yandex.ru/d/WkDN69OomEBY_g"  # 🔁 Убедись, что ссылка публичная
+TOKEN = "7522558346:AAEdZfdvAEoDntjAf0kmxdp0DSd5iDamRcc"
+YANDEX_FOLDER_KEY = "WkDN69OomEBY_g"  # Только ID, без https://disk...
 
 def normalize_text(text):
     return text.strip().lower().replace(" ", "_")
@@ -32,9 +33,10 @@ def extract_numeric_chat_id(chat_id):
 def send_photo_from_yadisk(filename, chat_id):
     print(f">>> Пытаемся найти файл на Я.Диске: {filename}")
     api_url = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
+    encoded_filename = urllib.parse.quote(f"/{filename}")
     params = {
-        "public_key": YANDEX_FOLDER_LINK,
-        "path": filename
+        "public_key": YANDEX_FOLDER_KEY,
+        "path": encoded_filename
     }
     response = requests.get(api_url, params=params)
     if response.status_code != 200:
@@ -81,3 +83,4 @@ def webhook():
         print(">>> Ответ Telegram:", response.status_code, response.text)
 
     return "", 200
+
